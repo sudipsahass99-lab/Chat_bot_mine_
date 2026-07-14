@@ -1,0 +1,32 @@
+{
+  "id": "bd54ef2c-ea22-4dd2-a470-a9c58ebe215e",
+  "title": "kgp sitemap...",
+  "messages": [
+    {
+      "role": "user",
+      "content": "kgp sitemap"
+    },
+    {
+      "role": "assistant",
+      "content": "The sitemap mentioned in the given context includes:\n\n- Google Map\n- Screen Reader Access\n- Copyright © 2023 Indian Institute of Technology Kharagpur\n- Footer Bottom Right Side Menus\n- NTF\n- NMEICT\n- End Footer Modal\n- Showing slider according to year for Institute Honor\n\nThis indicates that the main components of the sitemap include links to various sections such as Google Maps, screen reader accessibility options, copyright notices, and footer menus related to the institute's infrastructure and communication platforms."
+    },
+    {
+      "role": "user",
+      "content": "google map"
+    },
+    {
+      "role": "assistant",
+      "content": "Google Map is included in the list of elements present in the sitemap. The document mentions \"Google Map Screen Reader Access,\" indicating that Google Map has been made accessible through screen readers. This suggests that there are features within the Google Map interface that can be navigated with assistive technology, enhancing usability for individuals who cannot see traditional maps."
+    },
+    {
+      "role": "user",
+      "content": "how many books kgp librry has"
+    },
+    {
+      "role": "assistant",
+      "content": "Based solely on the information provided in Document 2 and Document 3, which appear to be the same documents but listed separately, neither document provides any direct information about the number of books held by the library at IIT Kharagpur. The documents primarily cover various departments' contact information, directories, and institutional policies without mentioning book holdings statistics. Therefore, based on the limited data available from these sources, the exact number of books in the library is not specified."
+    }
+  ],
+  "created_at": "2025-11-13T19:35:30.441413",
+  "updated_at": "2025-11-13T19:35:30.441422"
+}

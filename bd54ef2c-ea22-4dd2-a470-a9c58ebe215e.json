@@ -1,0 +1,16 @@
+{
+  "id": "b20f9ff8-80cf-4033-ad9a-268dc9344d03",
+  "title": "what is agv...",
+  "messages": [
+    {
+      "role": "user",
+      "content": "what is agv"
+    },
+    {
+      "role": "assistant",
+      "content": "AGV stands for Autonomous Ground Vehicle. It was founded in 2011 at IIT Kharagpur and is a multi-disciplinary research group aimed at building a fully operational self-driving car. The team focuses on various projects involving computer vision, deep learning, and reinforcement learning. They participate in competitions like the Intelligent Ground Vehicle Challenge (IGVC) and the Mahindra Rise Prize Driverless Car Challenge. AGV's goal is to reduce road accidents, improve transportation efficiency, and eventually develop India's first fully operational self-driving car."
+    }
+  ],
+  "created_at": "2025-11-13T22:17:59.346835",
+  "updated_at": "2025-11-13T22:17:59.346851"
+}

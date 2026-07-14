@@ -1,0 +1,191 @@
+from flask import Flask, render_template, request, jsonify, session
+from chatbot import IITKGPChatbot
+import os
+import time
+import uuid
+import logging
+
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+app = Flask(__name__)
+app.secret_key = 'iitkgp-chatbot-secret-key-2024'
+
+# Initialize chatbot (will be loaded on first request)
+chatbot = None
+
+# Define multiple data sources
+DATA_DIRECTORIES = [
+    "/home/du1/21CS30035/data_analytics_project/iit-kgp",
+    "/home/du1/21CS30035/data_analytics_project/meta-kgp"
+]
+REDDIT_DATA_PATH = "/home/du1/21CS30035/data_analytics_project/iitkgp_subreddit_final_data.json"
+
+def initialize_chatbot(force_recreate: bool = False):
+    """Initialize the chatbot (called on first request)"""
+    global chatbot
+    if chatbot is None:
+        logger.info("Initializing IIT KGP Chatbot with enhanced knowledge base...")
+        
+        # Log data sources
+        logger.info(f"Data directories: {DATA_DIRECTORIES}")
+        logger.info(f"Reddit data path: {REDDIT_DATA_PATH}")
+        
+        # Check if data sources exist
+        for directory in DATA_DIRECTORIES:
+            if not os.path.exists(directory):
+                logger.warning(f"Data directory not found: {directory}")
+        
+        if not os.path.exists(REDDIT_DATA_PATH):
+            logger.warning(f"Reddit data file not found: {REDDIT_DATA_PATH}")
+        
+        try:
+            chatbot = IITKGPChatbot(DATA_DIRECTORIES, REDDIT_DATA_PATH)
+            success = chatbot.setup_retrieval_system(force_recreate=force_recreate)
+            if not success:
+                raise Exception("Failed to set up retrieval system")
+            logger.info("Chatbot initialized successfully with enhanced knowledge base!")
+        except Exception as e:
+            logger.error(f"Failed to initialize chatbot: {e}")
+            raise
+    return chatbot
+
+@app.route('/')
+def home():
+    """Home page"""
+    return render_template('index.html')
+
+@app.route('/chat')
+def chat_interface():
+    """Main chat interface"""
+    return render_template('chat.html')
+
+@app.route('/api/chat', methods=['POST'])
+def chat_api():
+    """API endpoint for chat messages"""
+    try:
+        # Initialize chatbot if not already done
+        chatbot_instance = initialize_chatbot()
+        
+        data = request.json
+        user_message = data.get('message', '').strip()
+        conversation_id = data.get('conversation_id')
+        print(f"conversation_id: {conversation_id}")
+        
+        if not user_message:
+            return jsonify({'error': 'Empty message'}), 400
+        
+        logger.info(f"Processing message: {user_message[:50]}...")
+        
+        # Load existing conversation or create new
+        conversation_title = None
+        if conversation_id:
+            conversation_data = chatbot_instance.history_manager.load_conversation(conversation_id)
+            if conversation_data:
+                conversation_history = conversation_data.get('messages', [])
+                conversation_title =  conversation_data.get('title', [])
+            else:
+                conversation_history = []
+            #     return jsonify({'error': 'Conversation not found'}), 404
+        else:
+            # Create new conversation
+            conversation_id = str(uuid.uuid4())
+            conversation_history = []
+        
+        # Generate response
+        start_time = time.time()
+        response = chatbot_instance.generate_response(user_message, conversation_history)
+        response_time = time.time() - start_time
+        
+        # Update conversation history
+        conversation_history.append({"role": "user", "content": user_message})
+        conversation_history.append({"role": "assistant", "content": response})
+        
+        # Save conversation
+        chatbot_instance.history_manager.save_conversation(conversation_id, conversation_history, conversation_title)
+        
+        logger.info(f"Response generated in {response_time:.2f}s")
+        
+        return jsonify({
+            'response': response,
+            'response_time': f"{response_time:.2f}s",
+            'conversation_id': conversation_id
+        })
+        
+    except Exception as e:
+        logger.error(f"Error in chat API: {str(e)}")
+        return jsonify({
+            'error': 'Sorry, I encountered an error while processing your request. Please try again.'
+        }), 500
+
+@app.route('/api/conversations', methods=['GET'])
+def get_conversations():
+    """Get list of all conversations"""
+    try:
+        chatbot_instance = initialize_chatbot()
+        conversations = chatbot_instance.history_manager.list_conversations()
+        return jsonify({'conversations': conversations})
+    except Exception as e:
+        logger.error(f"Error getting conversations: {str(e)}")
+        return jsonify({'error': 'Failed to load conversations'}), 500
+
+@app.route('/api/conversation/<conversation_id>', methods=['GET'])
+def get_conversation(conversation_id):
+    """Get specific conversation"""
+    try:
+        chatbot_instance = initialize_chatbot()
+        conversation_data = chatbot_instance.history_manager.load_conversation(conversation_id)
+        if conversation_data:
+            return jsonify(conversation_data)
+        else:
+            return jsonify({'error': 'Conversation not found'}), 404
+    except Exception as e:
+        logger.error(f"Error getting conversation: {str(e)}")
+        return jsonify({'error': 'Failed to load conversation'}), 500
+
+@app.route('/api/conversation/<conversation_id>', methods=['DELETE'])
+def delete_conversation(conversation_id):
+    """Delete a conversation"""
+    try:
+        chatbot_instance = initialize_chatbot()
+        chatbot_instance.history_manager.delete_conversation(conversation_id)
+        return jsonify({'success': True})
+    except Exception as e:
+        logger.error(f"Error deleting conversation: {str(e)}")
+        return jsonify({'error': 'Failed to delete conversation'}), 500
+
+@app.route('/api/new_conversation', methods=['POST'])
+def new_conversation():
+    """Create a new conversation session"""
+    conversation_id = str(uuid.uuid4())
+    return jsonify({'conversation_id': conversation_id})
+
+@app.route('/about')
+def about():
+    """About page"""
+    return render_template('about.html')
+
+@app.route('/health')
+def health_check():
+    """Health check endpoint"""
+    try:
+        chatbot_instance = initialize_chatbot()
+        return jsonify({'status': 'healthy', 'message': 'Chatbot is running'})
+    except Exception as e:
+        return jsonify({'status': 'unhealthy', 'error': str(e)}), 500
+
+@app.route('/api/recreate_embeddings', methods=['POST'])
+def recreate_embeddings():
+    """Force recreation of embeddings (admin endpoint)"""
+    try:
+        global chatbot
+        chatbot = None  # Force reinitialization
+        chatbot_instance = initialize_chatbot(force_recreate=True)
+        return jsonify({'success': True, 'message': 'Embeddings recreated successfully'})
+    except Exception as e:
+        return jsonify({'error': f'Failed to recreate embeddings: {str(e)}'}), 500
+
+if __name__ == '__main__':
+    logger.info("Starting IIT KGP Chatbot Web Application...")
+    app.run(host='127.0.0.1', port=5000, debug=True)
